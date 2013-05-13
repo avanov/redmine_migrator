@@ -1,0 +1,10 @@
+.[oa]
+*~
+.py[co]
+.idea/
+
+build/
+dist/
+*.egg-info/
+
+docs/_build
