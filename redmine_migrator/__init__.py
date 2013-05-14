@@ -2,6 +2,7 @@ import argparse
 from collections import OrderedDict
 import logging
 
+from psycopg2.extensions import Binary
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -47,38 +48,36 @@ def main():
         ).fetchall()
         columns = tuple([column.column_name for column in columns])
         metadata.append((table_name, columns))
-    COLUMNS = OrderedDict(metadata)
+    POSTGRES_TABLES = OrderedDict(metadata)
 
     sequences = pg.execute("SELECT relname FROM pg_class WHERE relkind = 'S'").fetchall()
-
-    SEQUENCES = set([seq.relname for seq in sequences])
+    POSTGRES_PK_SEQUENCES = set([seq.relname for seq in sequences])
 
     sqlite_tables = lite.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
     SQLITE_TABLES = set([table.name for table in sqlite_tables])
 
+    # Migrate data
+    # ------------------------
     try:
-        missing_tables = []
-        for table_name in COLUMNS:
+        for table_name in POSTGRES_TABLES:
             if table_name not in SQLITE_TABLES:
-                missing_tables.append(table_name)
                 continue
 
-            records = lite.execute(
-                "SELECT * FROM {table_name}".format(table_name=table_name)
-            ).fetchall()
-
+            records = lite.execute("SELECT * FROM {table_name}".format(table_name=table_name)).fetchall()
             for record in records:
                 table_handler = NON_STANDARD_TABLES.get(table_name, handle_standard_table)
-                table_handler(pg, table_name, COLUMNS[table_name], record)
+                table_handler(pg, table_name, POSTGRES_TABLES[table_name], record)
 
-            if sequence_name(table_name) in SEQUENCES:
+            if sequence_name(table_name) in POSTGRES_PK_SEQUENCES:
                 update_pk_sequence(pg, table_name)
 
     except Exception:
         pg.rollback()
         raise
+
     else:
         pg.commit()
+
     finally:
         lite.close()
         pg.close()
@@ -119,10 +118,7 @@ def insert_statement(table_name, columns, data=None):
         columns_list.append(column)
         values_list.append(":{column}".format(column=column))
 
-    return (
-        "INSERT INTO {table_name} ({columns_list}) "
-        "VALUES ({values_list})"
-    ).format(
+    return "INSERT INTO {table_name} ({columns_list}) VALUES ({values_list})".format(
         table_name=table_name,
         columns_list=', '.join(columns_list),
         values_list=', '.join(values_list)
@@ -147,10 +143,7 @@ def update_statement(table_name, columns, data=None):
             continue
         columns_list.append("{column} = :{column}".format(column=column))
 
-    return (
-        "UPDATE {table_name} SET {columns_list} "
-        "WHERE id = :id"
-    ).format(
+    return "UPDATE {table_name} SET {columns_list} WHERE id = :id".format(
         table_name=table_name,
         columns_list=', '.join(columns_list)
     )
@@ -173,48 +166,52 @@ def update_pk_sequence_statement(table_name, currval=None):
     :param str table_name: sequence table_name
     :param currval: current value of the sequnece
     :type currval: int or None
-    :return:
+    :return: sequence alteration SQL statement
     :rtype: str
     """
     # currval == None might happen when the target table is empty
     if currval is None:
         currval = 0
-    return (
-        "ALTER SEQUENCE {sequence_name} RESTART WITH {nextval}"
-    ).format(sequence_name=sequence_name(table_name), nextval=currval + 1)
+    return "ALTER SEQUENCE {sequence_name} RESTART WITH {nextval}".format(
+        sequence_name=sequence_name(table_name), nextval=currval + 1
+    )
 
 
 # Handlers
 # --------------------------------------
 
 def handle_standard_table(pgconn, table_name, columns, record):
+    """
+
+    :param pgconn:
+    :param table_name:
+    :param columns:
+    :param record:
+    :return:
+    """
     if 'id' in columns:
         data_exists = pgconn.execute(
             "SELECT 1 FROM {table_name} WHERE id = :id".format(table_name=table_name),
-            {'id':record['id']}
+            {
+                'id': record['id']
+            }
         ).fetchone()
         if data_exists:
-            pgconn.execute(
-                update_statement(table_name, columns, dict(record)),
-                record
-            )
+            pgconn.execute(update_statement(table_name, columns, dict(record)), record)
         else:
-            pgconn.execute(
-                insert_statement(table_name, columns, dict(record)),
-                record
-            )
+            pgconn.execute(insert_statement(table_name, columns, dict(record)), record)
     else:
-        pgconn.execute(
-            insert_statement(table_name, columns, dict(record)),
-            record
-        )
-    return
+        pgconn.execute(insert_statement(table_name, columns, dict(record)), record)
+
+    return True
 
 
 def handle_schema_migrations(pgconn, table_name, columns, record):
     """
 
     :param pgconn:
+    :param table_name:
+    :param columns:
     :param record: sqlite row record of the corresponding table
     """
     data_exists = pgconn.execute(
@@ -222,16 +219,25 @@ def handle_schema_migrations(pgconn, table_name, columns, record):
         {'version':record.version}
     ).fetchone()
     if data_exists:
-        return
+        return True
     pgconn.execute("INSERT INTO schema_migrations (version) VALUES (:version)",
         dict(record)
     )
-    return
+    return True
 
 
 def handle_wiki_content_versions(pgconn, table_name, columns, record):
-    #return handle_standard_table(pgconn, table_name, columns, record)
-    pass
+    """
+
+    :param pgconn:
+    :param table_name:
+    :param columns:
+    :param record:
+    :return:
+    """
+    data = dict(record)
+    data['data'] = Binary(data['data'].encode('utf-8'))
+    return handle_standard_table(pgconn, table_name, columns, data)
 
 
 NON_STANDARD_TABLES = {
