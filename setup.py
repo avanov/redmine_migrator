@@ -32,10 +32,10 @@ setup(
     author_email="maxim.avanov@gmail.com",
     maintainer="Maxim Avanov",
     maintainer_email="maxim.avanov@gmail.com",
-    description="Migrate Redmine data from SQLite to Postgres",
+    description="Migrate Redmine data from SQLite to Postgres with consistent type conversion.",
     long_description=readme,
     license="MIT",
-    url="https://github.com/2nd/redmine_migrator",
+    url="https://redmine_migrator.readthedocs.org/en/latest/",
     download_url="https://github.com/2nd/redmine_migrator",
     keywords="cli utils redmine migrate sqlite postgres",
     # See the full list on http://pypi.python.org/pypi?%3Aaction=list_classifiers
