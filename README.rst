@@ -3,7 +3,7 @@ redmine_migrator
 
 .. image:: https://travis-ci.org/2nd/redmine_migrator.png
 
-Migrate Redmine data from SQLite to Postgres.
+Migrate Redmine data from SQLite to Postgres with consistent type conversion.
 
 
 Installation

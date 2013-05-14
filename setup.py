@@ -35,7 +35,7 @@ setup(
     description="Migrate Redmine data from SQLite to Postgres with consistent type conversion.",
     long_description=readme,
     license="MIT",
-    url="https://redmine_migrator.readthedocs.org/en/latest/",
+    url="https://redmine-migrator.readthedocs.org/en/latest/",
     download_url="https://github.com/2nd/redmine_migrator",
     keywords="cli utils redmine migrate sqlite postgres",
     # See the full list on http://pypi.python.org/pypi?%3Aaction=list_classifiers
