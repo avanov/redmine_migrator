@@ -37,7 +37,7 @@ setup(
     license="MIT",
     url="https://github.com/2nd/redmine_migrator",
     download_url="https://github.com/2nd/redmine_migrator",
-    keywords="cli utils",
+    keywords="cli utils redmine migrate sqlite postgres",
     # See the full list on http://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         'Development Status :: 5 - Production/Stable',
