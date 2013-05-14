@@ -1,7 +1,9 @@
 redmine_migrator
 ================
 
-Migrate Redmine data from SQLite to Postgres
+Migrate Redmine data from SQLite to Postgres.
+
+**Status:** unstable
 
 
 Installation
