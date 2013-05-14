@@ -8,11 +8,14 @@ readme = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
 
 setup(
     name='redmine_migrator',
-    version='1.0.0',
+    version='0.1',
     packages=find_packages(exclude=['tests']),
-    install_requires=[],
-    setup_requires=[],
-    tests_require=[],
+    install_requires=[
+        'psycopg2',
+        'sqlalchemy'
+    ],
+    setup_requires=['nose'],
+    tests_require=['coverage'],
     package_data={
         # If any package contains listed files, include them
         '':['*.txt', '*.rst']
@@ -47,6 +50,5 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Topic :: Education',
         ]
 )
