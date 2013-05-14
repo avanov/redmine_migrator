@@ -1,6 +1,7 @@
 redmine_migrator
 ================
 
+Migrate Redmine data from SQLite to Postgres
 
 
 Installation
@@ -29,5 +30,4 @@ Usage
 .. code-block:: bash
 
     $ redmine_migrator sqlite:////path/to/sqlite_redmine.db postgresql+psycopg2://user:password@:port/dbname?host=/var/run/postgresql
-
 

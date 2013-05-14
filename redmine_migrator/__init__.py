@@ -10,25 +10,26 @@ def main():
     """
     CLI entry point.
     """
-    cli_parser = argparse.ArgumentParser(
-        description='Migrate Redmine data from SQLite to Postgres'
-    )
-    cli_parser.add_argument('sqlite_url', help="SQLite source URL")
-    cli_parser.add_argument('postgres_url', help="Postgres target URL")
+    cli_parser = argparse.ArgumentParser(description='Migrate Redmine data from SQLite to Postgres')
+    cli_parser.add_argument('sqlite_url', help='SQLite source URL')
+    cli_parser.add_argument('postgres_url', help='Postgres target URL')
+    cli_parser.add_argument("-v", "--verbose", help='increase output verbosity', action='store_true')
     conf = cli_parser.parse_args()
 
-    logging.basicConfig()
-    logging.getLogger('sqlalchemy').setLevel(logging.INFO)
+    if conf.verbose:
+        logging.basicConfig()
+        logging.getLogger('sqlalchemy').setLevel(logging.INFO)
 
     # Establish connections
     # ---------------------
-    sqlite_engine = create_engine(conf.sqlite_url, encoding='utf-8', )
+    sqlite_engine = create_engine(conf.sqlite_url, encoding='utf-8')
     lite = sessionmaker(bind=sqlite_engine, autocommit=False)()
 
     postgres_engine = create_engine(conf.postgres_url, encoding='utf-8')
     pg = sessionmaker(bind=postgres_engine, autocommit=False)()
 
     # Get Postgres' tables info
+    # -------------------------
     pg_tables = pg.execute(
         "SELECT table_name "
         "FROM information_schema.tables "
@@ -48,9 +49,7 @@ def main():
         metadata.append((table_name, columns))
     COLUMNS = OrderedDict(metadata)
 
-    sequences = pg.execute(
-        "SELECT relname FROM pg_class WHERE relkind = 'S'"
-    ).fetchall()
+    sequences = pg.execute("SELECT relname FROM pg_class WHERE relkind = 'S'").fetchall()
 
     SEQUENCES = set([seq.relname for seq in sequences])
 
@@ -78,12 +77,11 @@ def main():
     except Exception:
         pg.rollback()
         raise
-
-    pg.commit()
-
-    lite.close()
-    pg.close()
-
+    else:
+        pg.commit()
+    finally:
+        lite.close()
+        pg.close()
 
 
 def update_pk_sequence(pgconn, table_name):
@@ -103,12 +101,14 @@ def update_pk_sequence(pgconn, table_name):
 
 def insert_statement(table_name, columns, data=None):
     """
+    Generates an INSERT statement for given `table_name`.
 
     :param str table_name: table name
     :param tuple columns: tuple of column names
     :param data: dict of column name => value mapping
     :type data: dict or None
-    :return:
+    :return: SQL statement template suitable for sqlalchemy.execute()
+    :rtype: str
     """
     data = {} if data is None else data
     columns_list = []
@@ -131,12 +131,14 @@ def insert_statement(table_name, columns, data=None):
 
 def update_statement(table_name, columns, data=None):
     """
+    Generates an UPDATE statement for given `table_name`.
 
     :param str table_name: table name
     :param tuple columns: tuple of column names
     :param data: dict of column name => value mapping
     :type data: dict or None
-    :return:
+    :return: SQL statement template suitable for sqlalchemy.execute()
+    :rtype: str
     """
     data = {} if data is None else data
     columns_list = []
@@ -156,8 +158,9 @@ def update_statement(table_name, columns, data=None):
 
 def sequence_name(table_name):
     """
+    Generates a standard sequence name of a primary key for a given `table_name`.
 
-    :param str table_name:
+    :param str table_name: table name
     :return: sequence name
     :rtype: str
     """
@@ -184,24 +187,24 @@ def update_pk_sequence_statement(table_name, currval=None):
 # Handlers
 # --------------------------------------
 
-def handle_standard_table(pg, table_name, columns, record):
+def handle_standard_table(pgconn, table_name, columns, record):
     if 'id' in columns:
-        data_exists = pg.execute(
+        data_exists = pgconn.execute(
             "SELECT 1 FROM {table_name} WHERE id = :id".format(table_name=table_name),
             {'id':record['id']}
         ).fetchone()
         if data_exists:
-            pg.execute(
+            pgconn.execute(
                 update_statement(table_name, columns, dict(record)),
                 record
             )
         else:
-            pg.execute(
+            pgconn.execute(
                 insert_statement(table_name, columns, dict(record)),
                 record
             )
     else:
-        pg.execute(
+        pgconn.execute(
             insert_statement(table_name, columns, dict(record)),
             record
         )
@@ -227,6 +230,7 @@ def handle_schema_migrations(pgconn, table_name, columns, record):
 
 
 def handle_wiki_content_versions(pgconn, table_name, columns, record):
+    #return handle_standard_table(pgconn, table_name, columns, record)
     pass
 
 
