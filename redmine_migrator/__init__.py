@@ -7,6 +7,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 
+logging.basicConfig()
+log = logging.getLogger(__name__)
+
+
 def main():
     """
     CLI entry point.
@@ -18,8 +22,8 @@ def main():
     conf = cli_parser.parse_args()
 
     if conf.verbose:
-        logging.basicConfig()
         logging.getLogger('sqlalchemy').setLevel(logging.INFO)
+        log.setLevel(logging.DEBUG)
 
     # Establish connections
     # ---------------------
@@ -189,19 +193,22 @@ def handle_standard_table(pgconn, table_name, columns, record):
     :param record:
     :return:
     """
+    data = dict(record)
+    log.debug("Standard handler: {}".format(data))
+
     if 'id' in columns:
         data_exists = pgconn.execute(
             "SELECT 1 FROM {table_name} WHERE id = :id".format(table_name=table_name),
             {
-                'id': record['id']
+                'id': data['id']
             }
         ).fetchone()
         if data_exists:
-            pgconn.execute(update_statement(table_name, columns, dict(record)), record)
+            pgconn.execute(update_statement(table_name, columns, data), record)
         else:
-            pgconn.execute(insert_statement(table_name, columns, dict(record)), record)
+            pgconn.execute(insert_statement(table_name, columns, data), record)
     else:
-        pgconn.execute(insert_statement(table_name, columns, dict(record)), record)
+        pgconn.execute(insert_statement(table_name, columns, data), record)
 
     return True
 
@@ -214,15 +221,16 @@ def handle_schema_migrations(pgconn, table_name, columns, record):
     :param columns:
     :param record: sqlite row record of the corresponding table
     """
+    data = dict(record)
+    log.debug("schema_migrations handler: {}".format(data))
+
     data_exists = pgconn.execute(
         "SELECT 1 FROM schema_migrations WHERE version = :version",
         {'version':record.version}
     ).fetchone()
     if data_exists:
         return True
-    pgconn.execute("INSERT INTO schema_migrations (version) VALUES (:version)",
-        dict(record)
-    )
+    pgconn.execute("INSERT INTO schema_migrations (version) VALUES (:version)", data)
     return True
 
 
@@ -236,6 +244,8 @@ def handle_wiki_content_versions(pgconn, table_name, columns, record):
     :return:
     """
     data = dict(record)
+    log.debug("wiki_content_versions handler: {}".format(data))
+
     data['data'] = Binary(data['data'].encode('utf-8'))
     return handle_standard_table(pgconn, table_name, columns, data)
 
