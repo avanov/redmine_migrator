@@ -8,7 +8,7 @@ readme = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
 
 setup(
     name='redmine_migrator',
-    version='0.1',
+    version='0.3',
     packages=find_packages(exclude=['tests']),
     install_requires=[
         'psycopg2',
@@ -36,7 +36,7 @@ setup(
     long_description=readme,
     license="MIT",
     url="https://redmine-migrator.readthedocs.org/en/latest/",
-    download_url="https://github.com/2nd/redmine_migrator",
+    download_url="https://github.com/avanov/redmine_migrator",
     keywords="cli utils redmine migrate sqlite postgres",
     # See the full list on http://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[

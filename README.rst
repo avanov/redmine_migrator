@@ -1,7 +1,7 @@
 redmine_migrator
 ================
 
-.. image:: https://travis-ci.org/2nd/redmine_migrator.png
+.. image:: https://travis-ci.org/avanov/redmine_migrator.png
 
 Migrate Redmine data from SQLite to Postgres with consistent type conversion.
 
@@ -21,7 +21,7 @@ Development version
 
     $ virtualenv ~/venv/migrator
     $ source ~/venv/migrator/bin/activate
-    $ git clone https://github.com/2nd/redmine_migrator.git ~/projects/migrator
+    $ git clone https://github.com/avanov/redmine_migrator.git ~/projects/migrator
     $ cd ~/projects/migrator
     $ python setup.py develop
 
